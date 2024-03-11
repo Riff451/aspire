@@ -1,0 +1,6 @@
+@NgRokEndToEnd.ApiServiceB_HostAddress = http://localhost:5134
+
+GET {{NgRokEndToEnd.ApiServiceB_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

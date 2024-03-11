@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsAspireHost>true</IsAspireHost>
+    <UserSecretsId>f4cc4795-b515-4080-8815-0632a278bedf</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="$(SharedDir)KnownResourceNames.cs" Link="KnownResourceNames.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\src\Aspire.Dashboard\Aspire.Dashboard.csproj" />
+    <ProjectReference Include="..\..\..\src\Aspire.Hosting.AppHost\Aspire.Hosting.AppHost.csproj" IsAspireProjectResource="false" />
+    <ProjectReference Include="..\..\..\src\Aspire.Hosting.Ngrok\Aspire.Hosting.Ngrok.csproj" IsAspireProjectResource="false" />
+    <ProjectReference Include="..\NgRokEndToEnd.ApiServiceA\NgRokEndToEnd.ApiServiceA.csproj" />
+    <ProjectReference Include="..\NgRokEndToEnd.ApiServiceB\NgRokEndToEnd.ApiServiceB.csproj" />
+  </ItemGroup>
+
+</Project>
