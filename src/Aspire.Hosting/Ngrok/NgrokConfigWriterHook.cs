@@ -15,26 +15,22 @@ internal class NgrokConfigWriterHook : IDistributedApplicationLifecycleHook
     {
         if (appModel.Resources.OfType<NgrokResource>().SingleOrDefault() is not { } ngrokResource)
         {
-            // No-op if there is no ngrok resource (removed after hook added).
+            // No-op if there is no ngrok resource.
             return;
         }
 
-        var defaultConfigLocation = await GetDefaultConfigLocationAsync().ConfigureAwait(false);
+        if (!ngrokResource.TryGetAnnotationsOfType<EndpointReferenceAnnotation>(out var endpointReferences))
+        {
+            // No-op if there is no reference added to ngrok to work with.
+            return;
+        }
+
+        var defaultConfigLocation = await GetDefaultConfigLocationAsync(ngrokResource.Command).ConfigureAwait(false);
 
         var configFilePath = PathNormalizer.NormalizePathForCurrentPlatform(Path.Combine(ngrokResource.WorkingDirectory, "ngrok-aspire.yml"));
 
         using var stream = new FileStream(configFilePath, FileMode.Create);
         using var writer = new StreamWriter(stream);
-
-    //    await writer.WriteAsync("""
-    //version: "2"
-    //tunnels:
-    //    website:
-    //        addr: 8888
-    //        schemes:
-    //            - https
-    //        proto: http
-    //""").ConfigureAwait(false);
 
         await writer.WriteAsync("""
     version: "2"
@@ -42,17 +38,13 @@ internal class NgrokConfigWriterHook : IDistributedApplicationLifecycleHook
 
     """).ConfigureAwait(false);
 
-        if (!ngrokResource.TryGetAnnotationsOfType<EndpointReferenceAnnotation>(out var endpointReferences))
+        foreach (var resource in endpointReferences.Select(reference => new
+                                                                        {
+                                                                            Name = reference.Resource.Name,
+                                                                            Endpoints = reference.Resource.GetEndpoints(),
+                                                                        }))
         {
-            return;
-        }
-
-        foreach (var resource in endpointReferences.Select(reference => new { Name = reference.Resource.Name, Endpoints = reference.Resource.GetEndpoints() }))
-        {
-            await writer.WriteAsync($"""
-        {resource.Name}:
-
-    """).ConfigureAwait(false);
+            await writer.WriteLineAsync($"    {resource.Name}:").ConfigureAwait(false);
 
             foreach (var endpoint in resource.Endpoints)
             {
@@ -82,12 +74,12 @@ internal class NgrokConfigWriterHook : IDistributedApplicationLifecycleHook
         }));
     }
 
-    private static async Task<string?> GetDefaultConfigLocationAsync()
+    private static async Task<string?> GetDefaultConfigLocationAsync(string ngrokCmd)
     {
         var outputStringBuilder = new StringBuilder();
 
         // run 'ngrok config check'
-        var ngrokConfigCheckSpec = new ProcessSpec("ngrok")
+        var ngrokConfigCheckSpec = new ProcessSpec(ngrokCmd)
         {
             Arguments = "config check",
             OnOutputData = data => outputStringBuilder.AppendLine(data),
