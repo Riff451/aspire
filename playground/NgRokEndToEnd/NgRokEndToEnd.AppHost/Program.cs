@@ -5,7 +5,7 @@ var builder = DistributedApplication.CreateBuilder(args);
 
 var api = builder.AddProject<Projects.NgRokEndToEnd_ApiService>("test-api");
 
-builder.AddNgrok("ngrok-tunnels", "ngrok")
+builder.AddNgrok("ngrok-tunnels")
     .WithReference(api);
 
 // This project is only added in playground projects to support development/debugging

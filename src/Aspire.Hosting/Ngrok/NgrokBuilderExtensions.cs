@@ -2,6 +2,8 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using Aspire.Hosting.ApplicationModel;
+using Aspire.Hosting.Lifecycle;
+using Aspire.Hosting.Ngrok;
 using Aspire.Hosting.Utils;
 
 namespace Aspire.Hosting;
@@ -25,9 +27,11 @@ public static class NgrokBuilderExtensions
         workingDirectory ??= string.Empty;
         workingDirectory = PathNormalizer.NormalizePathForCurrentPlatform(Path.Combine(builder.AppHostDirectory, workingDirectory));
 
+        builder.Services.TryAddLifecycleHook<NgrokConfigWriterHook>();
+
         var resource = new NgrokResource(name, "ngrok", workingDirectory, args);
 
         return builder.AddResource(resource)
-                      .WithHttpEndpoint(hostPort: 4040, name: "ngrok-inspection-interface");
+                      .WithEndpoint(hostPort: 4040, scheme: "http", name: "ngrok-inspection-interface", env: null, isProxied: false);
     }
 }
