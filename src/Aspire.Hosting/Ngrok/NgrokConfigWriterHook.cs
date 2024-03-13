@@ -21,20 +21,49 @@ internal class NgrokConfigWriterHook : IDistributedApplicationLifecycleHook
 
         var defaultConfigLocation = await GetDefaultConfigLocationAsync().ConfigureAwait(false);
 
-        var configFilePath = PathNormalizer.NormalizePathForCurrentPlatform(Path.Combine(ngrokResource.WorkingDirectory, "ngrok.yml"));
+        var configFilePath = PathNormalizer.NormalizePathForCurrentPlatform(Path.Combine(ngrokResource.WorkingDirectory, "ngrok-aspire.yml"));
 
         using var stream = new FileStream(configFilePath, FileMode.Create);
         using var writer = new StreamWriter(stream);
 
+    //    await writer.WriteAsync("""
+    //version: "2"
+    //tunnels:
+    //    website:
+    //        addr: 8888
+    //        schemes:
+    //            - https
+    //        proto: http
+    //""").ConfigureAwait(false);
+
         await writer.WriteAsync("""
     version: "2"
     tunnels:
-        website:
-            addr: 8888
+
+    """).ConfigureAwait(false);
+
+        if (!ngrokResource.TryGetAnnotationsOfType<EndpointReferenceAnnotation>(out var endpointReferences))
+        {
+            return;
+        }
+
+        foreach (var resource in endpointReferences.Select(reference => new { Name = reference.Resource.Name, Endpoints = reference.Resource.GetEndpoints() }))
+        {
+            await writer.WriteAsync($"""
+        {resource.Name}:
+
+    """).ConfigureAwait(false);
+
+            foreach (var endpoint in resource.Endpoints)
+            {
+                await writer.WriteAsync($"""
+            addr: {endpoint.Port}
             schemes:
                 - https
-            proto: http
+            proto: {endpoint.Scheme}
     """).ConfigureAwait(false);
+            }
+        }
 
         ngrokResource.Annotations.Add(new CommandLineArgsCallbackAnnotation(updatedArgs =>
         {
