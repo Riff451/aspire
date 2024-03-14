@@ -41,6 +41,7 @@ internal class NgrokConfigWriterHook : IDistributedApplicationLifecycleHook
         var configFileBuilder = new StringBuilder();
 
         configFileBuilder.Append("""
+    log: stdout
     version: "2"
     tunnels:
 

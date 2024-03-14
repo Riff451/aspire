@@ -10,8 +10,12 @@ namespace Aspire.Hosting.ApplicationModel;
 /// <param name="command">The command to execute.</param>
 /// <param name="workingDirectory">The working directory to use for the command.</param>
 /// <param name="args">The arguments to pass to the command.</param>
-public class NgrokResource(string name, string command, string workingDirectory, string[]? args)
+/// <param name="authtoken">The ngrok authtoken identifying a user.</param>
+public class NgrokResource(string name, string command, string workingDirectory, string[]? args, string? authtoken = null)
     : ExecutableResource(name, command, workingDirectory, args)
 {
-
+    /// <summary>
+    /// Gets the ngrok authtoken identifying a user.
+    /// </summary>
+    public string? AuthToken => authtoken;
 }
