@@ -1,6 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System.Globalization;
 using System.Text;
 using Aspire.Hosting.ApplicationModel;
 using Aspire.Hosting.Dcp.Process;
@@ -11,7 +12,13 @@ namespace Aspire.Hosting.Ngrok;
 
 internal class NgrokConfigWriterHook : IDistributedApplicationLifecycleHook
 {
-    public async Task AfterEndpointsAllocatedAsync(DistributedApplicationModel appModel, CancellationToken cancellationToken)
+    /// <summary>
+    /// TODO
+    /// </summary>
+    /// <param name="appModel">The application model.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    public async Task AfterEndpointsAllocatedAsync(DistributedApplicationModel appModel, CancellationToken cancellationToken = default)
     {
         if (appModel.Resources.OfType<NgrokResource>().SingleOrDefault() is not { } ngrokResource)
         {
@@ -26,36 +33,39 @@ internal class NgrokConfigWriterHook : IDistributedApplicationLifecycleHook
         }
 
         var defaultConfigLocation = await GetDefaultConfigLocationAsync(ngrokResource.Command).ConfigureAwait(false);
-
         var configFilePath = PathNormalizer.NormalizePathForCurrentPlatform(Path.Combine(ngrokResource.WorkingDirectory, "ngrok-aspire.yml"));
 
         using var stream = new FileStream(configFilePath, FileMode.Create);
         using var writer = new StreamWriter(stream);
 
-        await writer.WriteAsync("""
+        var configFileBuilder = new StringBuilder();
+
+        configFileBuilder.Append("""
     version: "2"
     tunnels:
 
-    """).ConfigureAwait(false);
+    """);
 
         foreach (var resource in endpointReferences.Select(reference => new
-                                                                        {
-                                                                            Name = reference.Resource.Name,
-                                                                            Endpoints = reference.Resource.GetEndpoints(),
-                                                                        }))
         {
-            await writer.WriteLineAsync($"    {resource.Name}:").ConfigureAwait(false);
+            Name = reference.Resource.Name,
+            Endpoints = reference.Resource.GetEndpoints(),
+        }))
+        {
+            configFileBuilder.AppendLine(CultureInfo.InvariantCulture, $"    {resource.Name}:");
 
             foreach (var endpoint in resource.Endpoints)
             {
-                await writer.WriteAsync($"""
+                configFileBuilder.Append(CultureInfo.InvariantCulture, $"""
             addr: {endpoint.Port}
             schemes:
                 - https
             proto: {endpoint.Scheme}
-    """).ConfigureAwait(false);
+    """);
             }
         }
+
+        await writer.WriteAsync(configFileBuilder, cancellationToken).ConfigureAwait(false);
 
         ngrokResource.Annotations.Add(new CommandLineArgsCallbackAnnotation(updatedArgs =>
         {
