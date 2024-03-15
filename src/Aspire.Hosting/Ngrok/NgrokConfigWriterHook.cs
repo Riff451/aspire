@@ -13,7 +13,15 @@ namespace Aspire.Hosting.Ngrok;
 internal class NgrokConfigWriterHook : IDistributedApplicationLifecycleHook
 {
     /// <summary>
-    /// TODO
+    /// Retrieves all the endpoint references of the ngrok resource and
+    /// it configure a tunnel for each.
+    /// Since the only way to run multiple tunnels with ngrok is by using
+    /// the config file(s), this method writes a config file in the ngrok resource
+    /// working directory.
+    /// After the config file with the configured tunnels has been written,
+    /// it updates the ngrok arguments for the start command. The final command
+    /// will look like: `ngrok --config [default-ngrok-config-file],[generated-config-file] start --all`.
+    /// The default ngrok config file location is discovered by running `ngrok config check`.
     /// </summary>
     /// <param name="appModel">The application model.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
@@ -40,7 +48,9 @@ internal class NgrokConfigWriterHook : IDistributedApplicationLifecycleHook
 
         var configFileBuilder = new StringBuilder();
 
+        // it's a YAML file so indentation matters
         configFileBuilder.Append("""
+    # Auto-generated file by Aspire Hosting
     log: stdout
     version: "2"
     tunnels:
@@ -53,15 +63,15 @@ internal class NgrokConfigWriterHook : IDistributedApplicationLifecycleHook
             Endpoints = reference.Resource.GetEndpoints(),
         }))
         {
-            configFileBuilder.AppendLine(CultureInfo.InvariantCulture, $"    {resource.Name}:");
+            configFileBuilder.AppendLine(CultureInfo.InvariantCulture, $"  {resource.Name}:");
 
             foreach (var endpoint in resource.Endpoints)
             {
                 configFileBuilder.Append(CultureInfo.InvariantCulture, $"""
-            addr: {endpoint.Port}
-            schemes:
-                - https
-            proto: {endpoint.Scheme}
+        addr: {endpoint.Port}
+        schemes:
+          - https
+        proto: {endpoint.Scheme}
     """);
             }
         }
